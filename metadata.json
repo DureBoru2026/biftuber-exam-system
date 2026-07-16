@@ -1,0 +1,6 @@
+{
+  "name": "Biftu_Beri_Exam_System",
+  "description": "Online examination and EAES preparation platform for Grade 9-12 students of Biftu Beri Secondary School.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn();
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isParentOf(studentId) {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && 
+             exists(userPath) && 
+             get(userPath).data.get('role', '') == 'parent' && 
+             get(userPath).data.get('studentId', '') == studentId;
+    }
+
+    function isAdmin() {
+      let email = request.auth.token.get('email', '');
+      let hasEmail = 'email' in request.auth.token;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && (
+        (hasEmail && (
+          email.lower() == 'admin@bbschool.com' ||
+          email.lower() == 'jemalfano030@gmail.com' ||
+          email.lower() == 'jemalict@gmail.com' ||
+          email.lower() == 'jemalfan030@gmail.com' ||
+          email.lower() == 'jemalict2@gmail.com' ||
+          email.lower() == 'admint@bbschool.com' ||
+          email.lower() == 'jemalict@school.com' ||
+          email.lower() == 'jemalfano030@bbschool.com' ||
+          email.lower() == 'jemalict2@bbschool.com'
+        )) ||
+        (exists(userPath) && get(userPath).data.get('role', '') == 'admin')
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return (isAdmin() || data.uid == request.auth.uid) &&
+             data.get('role', '') in ['admin', 'student', 'parent'];
+    }
+
+    function isValidExam(data) {
+      return data.keys().hasAll(['title', 'subject', 'grade', 'stream', 'durationMinutes', 'creatorId']) &&
+             data.title is string && 
+             data.subject is string &&
+             (isAdmin() || data.creatorId == request.auth.uid);
+    }
+
+    function isValidQuestion(data) {
+      return data.keys().hasAll(['text', 'options', 'correctOptionIndex', 'points']) &&
+             data.options is list && data.options.size() >= 2;
+    }
+
+    function isValidAttempt(data) {
+      return data.keys().hasAll(['userId', 'examId', 'startedAt', 'status']) &&
+             (isAdmin() || data.userId == request.auth.uid);
+    }
+
+    function isValidAnswer(data) {
+      return data.keys().hasAll(['questionId', 'selectedOptionIndex']);
+    }
+
+    function isValidNews(data) {
+      return data.keys().hasAll(['title', 'summary', 'category', 'date', 'creatorId']) &&
+             (isAdmin() || data.creatorId == request.auth.uid);
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['userId', 'examId', 'attemptId', 'difficulty', 'createdAt']) &&
+             data.difficulty in ['very-easy', 'easy', 'average', 'hard', 'very-hard'];
+    }
+    
+    function isValidSupplementaryClass(data) {
+      return data.keys().hasAll(['grade', 'subject', 'teacherId', 'date', 'startTime', 'endTime', 'status', 'createdAt']) &&
+             (isAdmin() || data.teacherId == request.auth.uid);
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'action', 'component', 'timestamp']) &&
+             data.userId == request.auth.uid;
+    }
+
+    // --- Rules ---
+
+    match /users/{userId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /metadata/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /exams/{examId} {
+      allow read: if (resource.data.status == 'published') || (isSignedIn() && isAdmin());
+      allow create, update, delete: if isAdmin();
+
+      match /questions/{questionId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /attempts/{attemptId} {
+      allow list: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        isParentOf(resource.data.userId)
+      );
+      allow get: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin() ||
+        isParentOf(resource.data.userId)
+      );
+      allow create: if isSignedIn() && isValidAttempt(incoming());
+      allow update: if (resource.data.userId == request.auth.uid || isAdmin()) && 
+                    incoming().diff(resource.data).affectedKeys().hasOnly(['finishedAt', 'status', 'score', 'totalPoints', 'violations', 'answers', 'updatedAt', 'answersCount', 'draftAnswers']) &&
+                    (resource.data.status == 'ongoing' || isAdmin());
+
+      match /answers/{answerId} {
+        allow list, get: if isSignedIn() && (
+          isAdmin() || 
+          get(/databases/$(database)/documents/attempts/$(attemptId)).data.userId == request.auth.uid ||
+          isParentOf(get(/databases/$(database)/documents/attempts/$(attemptId)).data.userId)
+        );
+        allow write: if isSignedIn() && 
+                     get(/databases/$(database)/documents/attempts/$(attemptId)).data.userId == request.auth.uid &&
+                     get(/databases/$(database)/documents/attempts/$(attemptId)).data.status == 'ongoing';
+      }
+
+      match /feedback/{feedbackId} {
+        allow read: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/attempts/$(attemptId)).data.userId == request.auth.uid);
+        allow create: if isSignedIn() && 
+                     get(/databases/$(database)/documents/attempts/$(attemptId)).data.userId == request.auth.uid &&
+                     isValidFeedback(incoming());
+      }
+    }
+
+    match /news/{newsId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidNews(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /marks/{markId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /registrationRequests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() && (
+        isAdmin() || 
+        (resource == null && request.resource.data.studentId == request.auth.uid) || 
+        (resource != null && resource.data.studentId == request.auth.uid)
+      );
+    }
+
+    match /feedbacks/{feedbackId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow create: if isSignedIn() && isAdmin() && isValidAuditLog(incoming());
+      allow read, list: if isSignedIn() && isAdmin();
+    }
+  }
+}

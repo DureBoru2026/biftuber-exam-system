@@ -1,0 +1,184 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "student", "parent"] },
+        "grade": { "type": "string", "enum": ["9", "10", "11", "12"] },
+        "stream": { "type": "string", "enum": ["natural", "social", "general"] },
+        "school": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "Unified exam definition",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "grade": { "type": "string" },
+        "stream": { "type": "string", "enum": ["natural", "social", "general"] },
+        "durationMinutes": { "type": "number" },
+        "description": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["draft", "published", "archived"] }
+      },
+      "required": ["title", "subject", "grade", "stream", "durationMinutes", "creatorId"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Exam question with options",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["multiple-choice"] },
+        "options": { "type": "array" },
+        "correctOptionIndex": { "type": "number" },
+        "explanation": { "type": "string" },
+        "points": { "type": "number" }
+      },
+      "required": ["text", "options", "correctOptionIndex"]
+    },
+    "Attempt": {
+      "title": "Attempt",
+      "description": "Student exam attempt",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "examId": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ongoing", "completed", "timed-out"] },
+        "score": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "violations": { "type": "number" }
+      },
+      "required": ["userId", "examId", "startedAt"]
+    },
+    "Answer": {
+      "title": "Answer",
+      "description": "Individual answer in an attempt",
+      "type": "object",
+      "properties": {
+        "questionId": { "type": "string" },
+        "selectedOptionIndex": { "type": "number" },
+        "isCorrect": { "type": "boolean" },
+        "answeredAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "News": {
+      "title": "News",
+      "description": "Public announcements and updates",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "creatorId": { "type": "string" },
+        "isNew": { "type": "boolean" }
+      },
+      "required": ["title", "summary", "category", "date", "creatorId"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Post-exam difficulty and experience feedback",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "examId": { "type": "string" },
+        "attemptId": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["very-easy", "easy", "average", "hard", "very-hard"] },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "examId", "attemptId", "difficulty", "createdAt"]
+    },
+    "SupplementaryClass": {
+      "title": "Supplementary Class",
+      "description": "Remedial or supplementary class schedule",
+      "type": "object",
+      "properties": {
+        "grade": { "type": "string" },
+        "subject": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "teacherName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "confirmed", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["grade", "subject", "teacherId", "date", "startTime", "endTime"]
+    },
+    "RegistrationRequest": {
+      "title": "Registration Request",
+      "description": "Request for new account creation",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "registerType": { "type": "string", "enum": ["Student", "Teacher"] },
+        "department": { "type": "string", "enum": ["General", "Social science", "Natural science"] },
+        "gradeLevel": { "type": "string", "enum": ["9", "10", "11", "12"] },
+        "gender": { "type": "string", "enum": ["Male", "Female"] },
+        "age": { "type": "number" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "processed", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "registerType", "department", "gradeLevel", "gender", "age"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Live messaging chat workspace",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "senderId", "senderName", "text"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Administrator report activity logs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string", "enum": ["view_report", "print_report", "export_pdf"] },
+        "targetStudentId": { "type": "string" },
+        "targetStudentName": { "type": "string" },
+        "component": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "action", "component", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "Student and admin profiles" },
+    "/exams/{examId}": { "schema": "Exam", "description": "Exam metadata" },
+    "/exams/{examId}/questions/{questionId}": { "schema": "Question", "description": "Questions for a specific exam" },
+    "/attempts/{attemptId}": { "schema": "Attempt", "description": "Student exam attempts" },
+    "/attempts/{attemptId}/answers/{answerId}": { "schema": "Answer", "description": "Detailed answers for an attempt" },
+    "/attempts/{attemptId}/feedback/{feedbackId}": { "schema": "Feedback", "description": "Student feedback for a specific exam attempt" },
+    "/news/{newsId}": { "schema": "News", "description": "Public school announcements" },
+    "/classes/{classId}": { "schema": "SupplementaryClass", "description": "Remedial class schedules" },
+    "/registrationRequests/{requestId}": { "schema": "RegistrationRequest", "description": "New account requests" },
+    "/chats/{chatId}": { "schema": "Chat", "description": "Live messaging chat chatroom" },
+    "/feedbacks/{feedbackId}": { "schema": "Feedback", "description": "Student feedback root copies" },
+    "/auditLogs/{logId}": { "schema": "AuditLog", "description": "Administrator and security audit logs" }
+  }
+}
