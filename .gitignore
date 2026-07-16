@@ -19,6 +19,7 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.production.local
 !.env.example
 
 # OS specific
